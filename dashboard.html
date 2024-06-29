@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link href="./output.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <div class="min-h-screen flex">
+        <!-- Sidebar -->
+        <div class="w-64 bg-gray-500 shadow-md">
+            <div class="p-4">
+                <h1 class="text-xl font-bold text-white">Dashboard</h1>
+            </div>
+            <nav class="mt-6">
+                <a href="./dashboard.html" class=" text-white block py-2.5 px-4 rounded transition duration-200 hover:bg-black">Dashboard</a>
+                <a href="./index.html" class=" text-white  block py-2.5 px-4 rounded transition duration-200 hover:bg-black">Showcase</a>
+                <a href="./management.html" class=" text-white block py-2.5 px-4 rounded transition duration-200 hover:bg-black">Admin</a>
+                <a href="./category.html" class=" text-white block py-2.5 px-4 rounded transition duration-200 hover:bg-black">Category</a>
+            </nav>
+        </div>
+        <!-- Main content -->
+        <div class="flex-1 p-10">
+            <h2 class="text-2xl font-bold mb-4">Welcome to the Dashboard</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold">Card 1</h3>
+                    <p class="mt-2 text-gray-600">Content goes here...</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold">Card 2</h3>
+                    <p class="mt-2 text-gray-600">Content goes here...</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold">Card 3</h3>
+                    <p class="mt-2 text-gray-600">Content goes here...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

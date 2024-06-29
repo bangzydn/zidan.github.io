@@ -1,0 +1,30 @@
+{
+  "items": [
+    {
+      "id": "15c5",
+      "name": "Soto",
+      "desc": "Enak",
+      "cat": "Makanan",
+      "price": "20000",
+      "image": "blob:http://127.0.0.1:5501/1677fab8-3391-4913-b8ea-416ab7bb6766"
+    },
+    {
+      "id": "09d8",
+      "name": "Jus",
+      "desc": "Juk Jerus",
+      "cat": "Minuman",
+      "price": "10000",
+      "image": "blob:http://127.0.0.1:5501/15a43699-51c4-4331-ad6f-257342ebee6c"
+    }
+  ],
+  "cat": [
+    {
+      "id": "15c5",
+      "cat_name": "Makanan"
+    },
+    {
+      "id": "d2cf",
+      "cat_name": "Minuman"
+    }
+  ]
+}
