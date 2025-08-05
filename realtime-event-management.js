@@ -13,15 +13,18 @@ function initializeSignalR() {
     try {
         console.log('Initializing SignalR connection...');
         
-        // Create SignalR connection
-        signalRConnection = $.connection.eventHub;
+        // Create SignalR connection using modern SignalR client
+        signalRConnection = new signalR.HubConnectionBuilder()
+            .withUrl("/eventHub")
+            .withAutomaticReconnect([0, 2000, 10000, 30000]) // Retry delays
+            .build();
         
         // Setup SignalR event handlers
         setupSignalREventHandlers();
         
         // Start the connection
-        $.connection.hub.start()
-            .done(function () {
+        signalRConnection.start()
+            .then(function () {
                 console.log('SignalR connected successfully');
                 isConnected = true;
                 reconnectAttempts = 0;
@@ -30,12 +33,12 @@ function initializeSignalR() {
                 showConnectionStatus('Connected', 'success');
                 
                 // Join the event updates group
-                signalRConnection.server.joinEventGroup(0);
+                signalRConnection.invoke("joinEventGroup", 0);
                 
                 // Initial data load
                 updateViewBasedOnEventId();
             })
-            .fail(function (error) {
+            .catch(function (error) {
                 console.error('SignalR connection failed:', error);
                 isConnected = false;
                 showConnectionStatus('Connection failed', 'error');
@@ -54,30 +57,25 @@ function initializeSignalR() {
             });
             
         // Handle connection state changes
-        $.connection.hub.connectionSlow(function () {
-            console.log('SignalR connection is slow');
-            showConnectionStatus('Connection slow', 'warning');
-        });
-        
-        $.connection.hub.reconnecting(function () {
-            console.log('SignalR reconnecting...');
+        signalRConnection.onreconnecting(function (error) {
+            console.log('SignalR reconnecting...', error);
             isConnected = false;
             showConnectionStatus('Reconnecting...', 'warning');
         });
         
-        $.connection.hub.reconnected(function () {
-            console.log('SignalR reconnected');
+        signalRConnection.onreconnected(function (connectionId) {
+            console.log('SignalR reconnected with connection ID:', connectionId);
             isConnected = true;
             reconnectAttempts = 0;
             showConnectionStatus('Reconnected', 'success');
             
             // Rejoin groups and refresh data
-            signalRConnection.server.joinEventGroup(0);
+            signalRConnection.invoke("joinEventGroup", 0);
             updateViewBasedOnEventId();
         });
         
-        $.connection.hub.disconnected(function () {
-            console.log('SignalR disconnected');
+        signalRConnection.onclose(function (error) {
+            console.log('SignalR disconnected:', error);
             isConnected = false;
             showConnectionStatus('Disconnected', 'error');
             
@@ -105,7 +103,7 @@ function setupSignalREventHandlers() {
     }
     
     // Handle event selection notifications
-    signalRConnection.client.eventSelected = function (data) {
+    signalRConnection.on("eventSelected", function (data) {
         console.log('SignalR: Event selected notification received:', data);
         
         try {
@@ -124,10 +122,10 @@ function setupSignalREventHandlers() {
         } catch (error) {
             console.error('Error handling eventSelected notification:', error);
         }
-    };
+    });
     
     // Handle event clearing notifications
-    signalRConnection.client.eventCleared = function (data) {
+    signalRConnection.on("eventCleared", function (data) {
         console.log('SignalR: Event cleared notification received:', data);
         
         try {
@@ -146,10 +144,10 @@ function setupSignalREventHandlers() {
         } catch (error) {
             console.error('Error handling eventCleared notification:', error);
         }
-    };
+    });
     
     // Handle operational hours update notifications
-    signalRConnection.client.operationalHoursUpdated = function (data) {
+    signalRConnection.on("operationalHoursUpdated", function (data) {
         console.log('SignalR: Operational hours updated notification received:', data);
         
         try {
@@ -175,7 +173,7 @@ function setupSignalREventHandlers() {
         } catch (error) {
             console.error('Error handling operationalHoursUpdated notification:', error);
         }
-    };
+    });
 }
 
 // Function to update operational hours from SignalR data
@@ -197,73 +195,97 @@ function updateOperationalHoursFromSignalR(data) {
 
 // Function to show connection status
 function showConnectionStatus(message, type) {
-    var statusClass = 'alert-info';
-    switch (type) {
-        case 'success':
-            statusClass = 'alert-success';
-            break;
-        case 'error':
-            statusClass = 'alert-danger';
-            break;
-        case 'warning':
-            statusClass = 'alert-warning';
-            break;
+    var statusElement = document.getElementById('connection-status');
+    var statusIndicator = document.getElementById('status-indicator');
+    var statusText = document.getElementById('status-text');
+    
+    if (!statusElement || !statusIndicator || !statusText) {
+        console.warn('Connection status elements not found');
+        return;
     }
     
-    var statusHtml = '<div class="alert ' + statusClass + ' alert-dismissible fade show connection-status" role="alert">' +
-        '<i class="fa fa-signal"></i> ' + escapeHtml(message) +
-        '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
-        '</div>';
+    // Set status text
+    statusText.textContent = message;
     
-    // Remove existing status
-    $('.connection-status').remove();
+    // Set indicator color based on type
+    statusIndicator.className = 'w-3 h-3 rounded-full mr-2';
+    switch (type) {
+        case 'success':
+            statusIndicator.classList.add('bg-green-500');
+            break;
+        case 'error':
+            statusIndicator.classList.add('bg-red-500');
+            break;
+        case 'warning':
+            statusIndicator.classList.add('bg-yellow-500');
+            break;
+        default:
+            statusIndicator.classList.add('bg-blue-500');
+    }
     
-    // Add new status
-    var container = $('.container').first() || $('body');
-    container.prepend(statusHtml);
+    // Show the status
+    statusElement.classList.remove('hidden');
     
-    // Auto remove after 5 seconds for success/warning
+    // Auto hide after 5 seconds for success/warning
     if (type !== 'error') {
         setTimeout(function() {
-            $('.connection-status').fadeOut();
+            statusElement.classList.add('hidden');
         }, 5000);
     }
 }
 
 // Function to show real-time notification
 function showRealTimeNotification(message, type) {
-    var iconClass = 'fa-info-circle';
-    var alertClass = 'alert-info';
+    // Create notification element
+    var notification = document.createElement('div');
+    notification.className = 'fixed top-20 right-4 z-40 bg-white rounded-lg shadow-lg p-3 border-l-4 max-w-sm';
     
+    // Set border color based on type
     switch (type) {
         case 'success':
-            iconClass = 'fa-check-circle';
-            alertClass = 'alert-success';
+            notification.classList.add('border-green-500');
             break;
         case 'error':
-            iconClass = 'fa-exclamation-triangle';
-            alertClass = 'alert-danger';
+            notification.classList.add('border-red-500');
             break;
         case 'warning':
-            iconClass = 'fa-exclamation-triangle';
-            alertClass = 'alert-warning';
+            notification.classList.add('border-yellow-500');
             break;
+        default:
+            notification.classList.add('border-blue-500');
     }
     
-    var notificationHtml = '<div class="alert ' + alertClass + ' alert-dismissible fade show realtime-notification" role="alert">' +
-        '<i class="fa ' + iconClass + '"></i> <strong>Real-time:</strong> ' + escapeHtml(message) +
-        '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
-        '</div>';
+    // Set content
+    notification.innerHTML = `
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+            </div>
+            <div class="ml-3">
+                <p class="text-sm font-medium text-gray-900">
+                    <strong>Real-time:</strong> ${escapeHtml(message)}
+                </p>
+            </div>
+            <div class="ml-auto pl-3">
+                <button onclick="this.parentElement.parentElement.parentElement.remove()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    `;
     
-    // Add notification
-    var container = $('.container').first() || $('body');
-    container.prepend(notificationHtml);
+    // Add to body
+    document.body.appendChild(notification);
     
     // Auto remove after 3 seconds
     setTimeout(function() {
-        $('.realtime-notification').fadeOut(function() {
-            $(this).remove();
-        });
+        if (notification.parentElement) {
+            notification.remove();
+        }
     }, 3000);
 }
 
@@ -346,7 +368,8 @@ function updateViewBasedOnEventId() {
             } else if (status === 'timeout') {
                 showErrorState('Request timeout');
             } else {
-                showErrorState('Error loading data');
+                // Server not available - show fallback content
+                showFallbackContent(eventId);
             }
         },
         complete: function () {
@@ -368,7 +391,25 @@ function updateOperationalHoursContainer(content) {
 
 // Function to reset operational hours to default state
 function resetOperationalHours() {
-    var defaultContent = '<p>No operational hours available for the selected event.</p>';
+    var defaultContent = `
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-gray-800">
+                        No Event Selected
+                    </h3>
+                    <div class="mt-2 text-sm text-gray-600">
+                        <p>Please select an event to view operational hours and real-time updates.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
     updateOperationalHoursContainer(defaultContent);
 }
 
@@ -376,7 +417,26 @@ function resetOperationalHours() {
 function showLoadingState() {
     var container = document.getElementById('ophours-container');
     if (container) {
-        container.innerHTML = '<p><i class="fa fa-spinner fa-spin"></i> Loading operational hours...</p>';
+        container.innerHTML = `
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-blue-800">
+                            Loading Event Data
+                        </h3>
+                        <div class="mt-2 text-sm text-blue-700">
+                            <p>Fetching operational hours and real-time updates...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
     }
 }
 
@@ -387,8 +447,33 @@ function hideLoadingState() {
 
 // Function to show error state
 function showErrorState(message) {
-    var errorContent = '<p class="text-danger"><i class="fa fa-exclamation-triangle"></i> ' + escapeHtml(message) + '</p>';
+    var errorContent = '<p class="text-red-600"><svg class="inline w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>' + escapeHtml(message) + '</p>';
     updateOperationalHoursContainer(errorContent);
+}
+
+// Function to show fallback content when server is not available
+function showFallbackContent(eventId) {
+    var fallbackContent = `
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-yellow-800">
+                        Server Unavailable
+                    </h3>
+                    <div class="mt-2 text-sm text-yellow-700">
+                        <p>Event ID: <strong>${escapeHtml(eventId)}</strong></p>
+                        <p>Real-time updates are currently unavailable. The system will retry automatically when the server is back online.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    updateOperationalHoursContainer(fallbackContent);
 }
 
 // Function to escape HTML to prevent XSS
