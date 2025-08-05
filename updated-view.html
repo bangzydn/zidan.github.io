@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Event Management</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- SignalR -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
+    
+    <style>
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 300px;
+        }
+        
+        .realtime-notification {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 9998;
+            max-width: 300px;
+        }
+        
+        .ophours-user-fly {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin: 20px 0;
+        }
+        
+        .btn-c2e-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-c2e-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            color: white;
+        }
+        
+        .scrollToTop {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .scrollToTop:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            color: white;
+        }
+        
+        .layout-admin {
+            background: #f8f9fa;
+            min-height: 100vh;
+        }
+        
+        .alert {
+            border-radius: 10px;
+            border: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .modal-content {
+            border-radius: 15px;
+            border: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .form-select {
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+        
+        .form-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        
+        .btn-close {
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+        
+        .btn-close:hover {
+            opacity: 1;
+        }
+        
+        .list-unstyled li {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .list-unstyled li:last-child {
+            border-bottom: none;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="layout-admin">
+    <div class="container mt-4">
+        <!-- Connection Status will be shown here -->
+        
+        <!-- Main Content -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0">
+                            <i class="fas fa-calendar-alt me-2"></i>
+                            Real-time Event Management
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <!-- Event Selection Section -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <h5>Event Selection</h5>
+                                <p class="text-muted">Select an event to view its operational hours in real-time.</p>
+                                <button type="button" class="btn btn-c2e-primary" onclick="openEventSelectionModal()">
+                                    <i class="fas fa-plus me-2"></i>Select Event
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary ms-2" onclick="clearSelectedEvent()">
+                                    <i class="fas fa-times me-2"></i>Clear Selection
+                                </button>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Connection Status</h5>
+                                <div id="connection-indicator" class="d-flex align-items-center">
+                                    <div id="connection-dot" class="bg-danger rounded-circle me-2" style="width: 12px; height: 12px;"></div>
+                                    <span id="connection-text">Disconnected</span>
+                                </div>
+                                <small class="text-muted">Real-time updates will be shown here</small>
+                            </div>
+                        </div>
+                        
+                        <!-- Operational Hours Display -->
+                        <div class="row">
+                            <div class="col-12">
+                                <h5>Operational Hours</h5>
+                                <div class="btn btn-c2e-primary ophours-user-fly">
+                                    <div id="ophours-container">
+                                        <p>No operational hours available for the selected event.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Debug Information (for development) -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="card bg-light">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">Debug Information</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <strong>Selected Event ID:</strong>
+                                                <span id="debug-event-id">None</span>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <strong>SignalR Status:</strong>
+                                                <span id="debug-signalr-status">Disconnected</span>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <strong>Last Update:</strong>
+                                                <span id="debug-last-update">Never</span>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <button type="button" class="btn btn-sm btn-outline-info" onclick="debugEventState()">
+                                                    <i class="fas fa-bug me-1"></i>Debug
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event Selection Modal -->
+    <div class="modal fade" id="selectEventModal" tabindex="-1" aria-labelledby="selectEventModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="selectEventModalLabel">
+                        <i class="fas fa-calendar-check me-2"></i>Select Event
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="eventSelectionForm">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="eventSelect" class="form-label">Choose an event:</label>
+                            <select class="form-select" id="eventSelect" name="eventId" required>
+                                <option value="">-- Select an event --</option>
+                                <!-- Options will be populated dynamically -->
+                            </select>
+                        </div>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Real-time Updates:</strong> Once selected, this event's operational hours will be displayed and updated in real-time across all connected clients.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </button>
+                        <button type="submit" class="btn btn-c2e-primary" disabled>
+                            <i class="fas fa-check me-2"></i>Select Event
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scroll to Top Button -->
+    <div class="scrollToTop">
+        <i class="bi bi-arrow-up-circle" title="Scroll to top of page"></i>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Real-time Event Management JavaScript -->
+    <script src="realtime-event-management.js"></script>
+    
+    <script>
+        // Additional initialization and UI updates
+        $(document).ready(function () {
+            // Scroll to top functionality
+            $('.scrollToTop').click(() => {
+                window.scrollTo(0, 0);
+            });
+            
+            // Update connection indicator
+            function updateConnectionIndicator() {
+                var isConnected = window.EventManager ? window.EventManager.isConnected() : false;
+                var dot = $('#connection-dot');
+                var text = $('#connection-text');
+                
+                if (isConnected) {
+                    dot.removeClass('bg-danger bg-warning').addClass('bg-success');
+                    text.text('Connected');
+                } else {
+                    dot.removeClass('bg-success bg-warning').addClass('bg-danger');
+                    text.text('Disconnected');
+                }
+            }
+            
+            // Update debug information
+            function updateDebugInfo() {
+                var eventId = localStorage.getItem('SelectedEventId') || 'None';
+                var signalrStatus = window.EventManager ? (window.EventManager.isConnected() ? 'Connected' : 'Disconnected') : 'Unknown';
+                var lastUpdate = new Date().toLocaleTimeString();
+                
+                $('#debug-event-id').text(eventId);
+                $('#debug-signalr-status').text(signalrStatus);
+                $('#debug-last-update').text(lastUpdate);
+            }
+            
+            // Update UI periodically
+            setInterval(function() {
+                updateConnectionIndicator();
+                updateDebugInfo();
+            }, 1000);
+            
+            // Load events for modal
+            function loadEventsForModal() {
+                $.ajax({
+                    url: '/Event/GetAllEvents',
+                    type: 'GET',
+                    success: function(data) {
+                        if (data.success && data.events) {
+                            var select = $('#eventSelect');
+                            select.find('option:not(:first)').remove();
+                            
+                            data.events.forEach(function(event) {
+                                select.append('<option value="' + event.id + '">' + 
+                                    (event.event_held || 'Event ' + event.id) + '</option>');
+                            });
+                        }
+                    },
+                    error: function() {
+                        console.error('Failed to load events for modal');
+                    }
+                });
+            }
+            
+            // Load events when modal is shown
+            $('#selectEventModal').on('show.bs.modal', function() {
+                loadEventsForModal();
+            });
+            
+            // Auto-hide alerts
+            setTimeout(function () {
+                var alert = document.getElementById("alert-msg");
+                if (alert) {
+                    alert.style.transition = "opacity 0.5s ease";
+                    alert.style.opacity = 0;
+                    setTimeout(function () {
+                        alert.style.display = "none";
+                    }, 500);
+                }
+            }, 3000);
+        });
+    </script>
+</body>
+</html>
