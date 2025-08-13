@@ -1,0 +1,9 @@
+# Sample proxy list - replace with your actual proxies
+# Format: one proxy per line
+# You can use http:// or https:// prefix, or just IP:PORT
+
+http://proxy1.example.com:8080
+http://proxy2.example.com:8080
+https://proxy3.example.com:8080
+192.168.1.100:8080
+proxy.example.com:3128
