@@ -13,16 +13,12 @@ return new class extends Migration
     {
         Schema::create('sales', function (Blueprint $table) {
             $table->id();
-            $table->string('nomor_penjualan')->unique();
-            $table->foreignId('customer_id')->nullable()->constrained()->onDelete('set null');
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->decimal('total_harga', 15, 2);
-            $table->decimal('total_diskon', 15, 2)->default(0);
-            $table->decimal('total_bayar', 15, 2);
-            $table->decimal('bayar', 15, 2);
-            $table->decimal('kembalian', 15, 2);
-            $table->enum('metode_pembayaran', ['tunai', 'kartu', 'transfer']);
-            $table->text('catatan')->nullable();
+            $table->foreignId('customer_id')->nullable()->constrained('customers')->nullOnDelete();
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->decimal('total', 15, 2);
+            $table->decimal('diskon', 15, 2)->default(0);
+            $table->decimal('grand_total', 15, 2);
+            $table->dateTime('tanggal');
             $table->timestamps();
         });
     }

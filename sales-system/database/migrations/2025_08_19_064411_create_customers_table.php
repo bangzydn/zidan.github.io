@@ -13,11 +13,10 @@ return new class extends Migration
     {
         Schema::create('customers', function (Blueprint $table) {
             $table->id();
-            $table->string('kode_pelanggan')->unique();
-            $table->string('nama_pelanggan');
-            $table->string('email')->nullable();
-            $table->string('telepon')->nullable();
+            $table->string('nama');
             $table->text('alamat')->nullable();
+            $table->string('telepon')->nullable();
+            $table->string('email')->nullable();
             $table->timestamps();
         });
     }

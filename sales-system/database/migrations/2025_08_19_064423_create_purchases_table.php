@@ -13,14 +13,10 @@ return new class extends Migration
     {
         Schema::create('purchases', function (Blueprint $table) {
             $table->id();
-            $table->string('nomor_pembelian')->unique();
-            $table->foreignId('supplier_id')->nullable()->constrained()->onDelete('set null');
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->decimal('total_harga', 15, 2);
-            $table->decimal('total_diskon', 15, 2)->default(0);
-            $table->decimal('total_bayar', 15, 2);
-            $table->enum('metode_pembayaran', ['tunai', 'kartu', 'transfer']);
-            $table->text('catatan')->nullable();
+            $table->foreignId('supplier_id')->nullable()->constrained('suppliers')->nullOnDelete();
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->decimal('total', 15, 2);
+            $table->dateTime('tanggal');
             $table->timestamps();
         });
     }

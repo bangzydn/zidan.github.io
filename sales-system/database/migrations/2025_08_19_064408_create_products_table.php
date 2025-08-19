@@ -21,8 +21,6 @@ return new class extends Migration
             $table->integer('stok')->default(0);
             $table->string('satuan');
             $table->string('foto')->nullable();
-            $table->integer('stok_minimum')->default(10);
-            $table->text('deskripsi')->nullable();
             $table->timestamps();
         });
     }

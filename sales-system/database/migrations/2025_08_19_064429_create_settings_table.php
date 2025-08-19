@@ -14,11 +14,9 @@ return new class extends Migration
         Schema::create('settings', function (Blueprint $table) {
             $table->id();
             $table->string('nama_toko');
-            $table->text('alamat_toko');
-            $table->string('telepon_toko');
-            $table->string('email_toko')->nullable();
-            $table->string('logo_toko')->nullable();
-            $table->string('currency', 10)->default('IDR');
+            $table->text('alamat_toko')->nullable();
+            $table->string('telepon_toko')->nullable();
+            $table->string('logo')->nullable();
             $table->timestamps();
         });
     }
