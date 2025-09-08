@@ -1,0 +1,44 @@
+{
+  "name": "clipai-advisor",
+  "version": "1.0.0",
+  "description": "AI Assistant untuk Agensi Kliping - Full Stack RAG Application",
+  "main": "index.js",
+  "scripts": {
+    "dev": "./run-dev.sh",
+    "dev:backend": "cd backend && source venv/bin/activate && uvicorn app.main:app --reload",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "start": "cd frontend && npm start",
+    "docker:dev": "cd docker && docker-compose up --build",
+    "docker:prod": "cd docker && docker-compose -f docker-compose.prod.yml up --build",
+    "test": "cd backend && python -m pytest && cd ../frontend && npm test",
+    "lint": "cd backend && flake8 app/ && cd ../frontend && npm run lint",
+    "format": "cd backend && black app/ && cd ../frontend && npm run format",
+    "setup": "cd backend && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt && cd ../frontend && npm install"
+  },
+  "keywords": [
+    "ai",
+    "rag",
+    "chatbot",
+    "kliping",
+    "video-editing",
+    "nextjs",
+    "fastapi",
+    "langchain"
+  ],
+  "author": "kvmedia",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/clipai-advisor.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/clipai-advisor/issues"
+  },
+  "homepage": "https://github.com/your-username/clipai-advisor#readme",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0",
+    "python": ">=3.9.0"
+  }
+}

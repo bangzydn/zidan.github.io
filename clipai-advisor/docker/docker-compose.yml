@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: clipai-postgres
+    environment:
+      POSTGRES_DB: clipai_advisor
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: clipai-backend
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/clipai_advisor
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-dummy-key}
+      - GROK_API_KEY=${GROK_API_KEY}
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - SECRET_KEY=${SECRET_KEY:-your-super-secret-key-change-in-production}
+      - DEBUG=true
+      - ALLOWED_ORIGINS=["http://localhost:3000","http://localhost:3001"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../backend:/app
+      - ../knowledge-base:/app/knowledge-base
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Next.js Frontend
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: clipai-frontend
+    environment:
+      - BACKEND_URL=http://backend:8000
+      - NEXT_PUBLIC_APP_NAME=ClipAI Advisor
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+    command: npm run dev
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: clipai-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+  # Vector Database (ChromaDB alternative to Pinecone for local dev)
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: clipai-chromadb
+    ports:
+      - "8001:8000"
+    volumes:
+      - chromadb_data:/chroma/chroma
+    environment:
+      - CHROMA_SERVER_HOST=0.0.0.0
+      - CHROMA_SERVER_HTTP_PORT=8000
+
+volumes:
+  postgres_data:
+  redis_data:
+  chromadb_data:
