@@ -1,0 +1,28 @@
+# Node
+node_modules/
+.pnpm-store/
+
+# Python
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+
+# Env & secrets
+.env
+*.env
+.env.*
+
+# Editors/OS
+.DS_Store
+.idea/
+.vscode/
+
+# Builds
+build/
+dist/
+*.log
+coverage/
+
+# Docker
+volumes/

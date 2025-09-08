@@ -1,0 +1,24 @@
+version: "3.9"
+services:
+  api:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: clipai
+      POSTGRES_PASSWORD: clipai
+      POSTGRES_DB: clipai
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+volumes:
+  pgdata:
